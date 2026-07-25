@@ -463,7 +463,7 @@ function sheetNewTopic(){
     '<label>Takip tarihi (isteğe bağlı)</label><input type="date" id="ntDue">' +
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
     '<button class="btn primary" data-act="nt-save">Ekle</button></div>');
-  setTimeout(function(){ var el = document.getElementById("ntTitle"); if(el) el.focus(); }, 60);
+  var ntEl = document.getElementById("ntTitle"); if(ntEl) ntEl.focus();
 }
 function sheetName(kind){ // kind: "area" | "person"
   var isArea = kind === "area";
@@ -473,7 +473,7 @@ function sheetName(kind){ // kind: "area" | "person"
     '<input type="text" id="nmName" placeholder="' + (isArea ? "örn. Yatırımlar" : "örn. Ahmet") + '" autocomplete="off">' +
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
     '<button class="btn primary" data-act="nm-save" data-kind="' + kind + '">Ekle</button></div>');
-  setTimeout(function(){ var el = document.getElementById("nmName"); if(el) el.focus(); }, 60);
+  var nmEl = document.getElementById("nmName"); if(nmEl) nmEl.focus();
 }
 function sheetGroupMenu(){
   var isArea = route.type === "area";
@@ -539,7 +539,8 @@ document.getElementById("importFile").addEventListener("change", function(e){
 /* ---------- olaylar ---------- */
 document.body.addEventListener("click", function(e){
   var el = e.target.closest("[data-act]");
-  if(e.target.closest("[data-stop]") && !el) return;
+  var stop = e.target.closest("[data-stop]");
+  if(stop && (!el || !stop.contains(el))) return;
   if(!el){
     if(e.target.classList && e.target.classList.contains("overlay")) closeSheet();
     return;
