@@ -11,6 +11,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <title>Konu Takibi</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#f4f5f7; --card:#ffffff; --text:#1a1d23; --muted:#6b7280; --line:#e5e7eb;
@@ -77,7 +80,6 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
 .person-row .count{font-size:13px; color:var(--muted);}
 .chev{color:var(--muted); font-size:18px;}
 .stack{display:flex; flex-direction:column; gap:8px;}
-/* topic rows */
 .topic-row{display:flex; align-items:flex-start; gap:10px; padding:12px 14px;}
 .check{
   width:24px; height:24px; border-radius:50%; border:2px solid var(--line); flex:none; margin-top:1px;
@@ -96,7 +98,6 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
 .badge.group{background:var(--accent-soft); color:var(--accent);}
 .empty{color:var(--muted); text-align:center; padding:28px 10px; font-size:15px;}
 .empty .big{font-size:30px; margin-bottom:8px;}
-/* quick add */
 .quickadd{display:flex; gap:8px; margin:12px 0 4px;}
 .quickadd input{
   flex:1; border:none; border-radius:var(--radius); padding:12px 14px; background:var(--card);
@@ -108,13 +109,11 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
 }
 .linkbtn{color:var(--accent); font-size:14px; font-weight:600; padding:10px 4px;}
 .mutedbtn{color:var(--muted); font-size:14px; padding:10px 4px;}
-/* fab */
 .fab{
   position:fixed; right:18px; bottom:calc(env(safe-area-inset-bottom, 0px) + 20px); z-index:25;
   width:56px; height:56px; border-radius:50%; background:var(--accent); color:#fff; font-size:28px;
   box-shadow:0 4px 14px rgba(47,111,237,.45); display:flex; align-items:center; justify-content:center;
 }
-/* sheet / modal */
 .overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:40;
   display:flex; align-items:flex-end; justify-content:center;
@@ -126,16 +125,14 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
 }
 .sheet h2{font-size:18px; margin:0 0 14px;}
 .sheet label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin:14px 0 6px;}
-.sheet input[type=text],.sheet input[type=date],.sheet select,.sheet textarea{
+.sheet input[type=text],.sheet input[type=email],.sheet input[type=date],.sheet select,.sheet textarea{
   width:100%; border:1px solid var(--line); border-radius:12px; padding:11px 12px; background:var(--bg); outline:none;
 }
-.sheet textarea{resize:vertical; min-height:70px;}
 .sheet .actions{display:flex; gap:10px; margin-top:20px;}
 .btn{flex:1; border-radius:12px; padding:13px; font-weight:700; text-align:center;}
 .btn.primary{background:var(--accent); color:#fff;}
 .btn.ghost{background:var(--bg); color:var(--text);}
 .btn.danger{background:var(--danger-soft); color:var(--danger);}
-/* status chips */
 .chips{display:flex; gap:8px;}
 .chip{
   flex:1; text-align:center; padding:10px 6px; border-radius:12px; background:var(--bg);
@@ -144,7 +141,6 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
 .chip.on-open{background:var(--accent-soft); color:var(--accent); border-color:var(--accent);}
 .chip.on-waiting{background:var(--waiting-soft); color:var(--waiting); border-color:var(--waiting);}
 .chip.on-closed{background:var(--closed-soft); color:var(--closed); border-color:var(--closed);}
-/* notes */
 .note{background:var(--card); border-radius:12px; padding:10px 12px; box-shadow:var(--shadow);}
 .note .when{font-size:12px; color:var(--muted); margin-bottom:2px;}
 .note .text{white-space:pre-wrap; font-size:15px;}
@@ -157,50 +153,71 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:calc(env(safe-area-inset-bottom, 0px) + 90px);
   background:var(--text); color:var(--bg); padding:9px 16px; border-radius:20px; font-size:14px; z-index:60;
-  opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap;
+  opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; max-width:90vw; overflow:hidden; text-overflow:ellipsis;
 }
 .toast.show{opacity:.95;}
 .hidden{display:none !important;}
+/* auth */
+.auth-wrap{max-width:400px; margin:0 auto; padding:60px 24px 40px; text-align:center;}
+.auth-logo{width:76px; height:76px; border-radius:20px; margin:0 auto 14px; display:block;}
+.auth-wrap h1{font-size:24px; margin:0 0 4px;}
+.auth-wrap .sub{color:var(--muted); font-size:14px; margin-bottom:26px;}
+.auth-wrap input{
+  width:100%; border:1px solid var(--line); border-radius:12px; padding:13px 14px;
+  background:var(--card); outline:none; margin-bottom:10px; text-align:left;
+}
+.auth-wrap .btn{width:100%; margin-top:6px;}
+.auth-err{color:var(--danger); font-size:14px; min-height:20px; margin:6px 0;}
+.member-pill{
+  display:inline-flex; align-items:center; gap:6px; background:var(--bg); border-radius:20px;
+  padding:6px 6px 6px 12px; font-size:14px; margin:0 6px 6px 0;
+}
+.member-pill button{color:var(--danger); font-weight:700; width:22px; height:22px; border-radius:50%; background:var(--danger-soft); font-size:12px;}
+.spin{
+  width:34px; height:34px; border:3px solid var(--line); border-top-color:var(--accent);
+  border-radius:50%; margin:120px auto; animation:sp 1s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg);}}
+.offline-bar{background:var(--waiting-soft); color:var(--waiting); font-size:13px; text-align:center; padding:6px; border-radius:10px; margin-bottom:10px;}
 </style>
 </head>
 <body>
-<header id="header"></header>
-<main id="view"></main>
+<header id="header" class="hidden"></header>
+<main id="view"><div class="spin"></div></main>
 <button class="fab hidden" id="fab" aria-label="Yeni konu">+</button>
 <div id="modal"></div>
 <div class="toast" id="toast"></div>
-<input type="file" id="importFile" accept="application/json,.json" class="hidden">
 
 <script>
 (function(){
 "use strict";
-/* ---------- depolama ---------- */
-var LS_KEY = "konu-takibi-v1";
-var mem = null;
-function loadRaw(){
-  try{ var s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; }
-  catch(e){ return mem; }
-}
-function saveRaw(d){
-  mem = d;
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(d)); }catch(e){}
-}
-function defaults(){
-  return {
-    areas:[
-      {id:"a-sirket", name:"Şirket", emoji:"🏢"},
-      {id:"a-aile",   name:"Aile",   emoji:"🏠"},
-      {id:"a-finans", name:"Finans", emoji:"💰"}
-    ],
-    people:[],
-    topics:[]
-  };
-}
-var db = loadRaw() || defaults();
-function save(){ saveRaw(db); }
+
+var ADMIN_EMAIL = "erdemyuruk@gmail.com";
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDZW7a9dwFAOSpWzm4gMukytBzrnTtuKM0",
+  authDomain: "konu-takibi.firebaseapp.com",
+  projectId: "konu-takibi",
+  storageBucket: "konu-takibi.firebasestorage.app",
+  messagingSenderId: "48523228961",
+  appId: "1:48523228961:web:f0661d44c00ad2f8a03060"
+});
+var auth = firebase.auth();
+var db = firebase.firestore();
+try{ db.enablePersistence({synchronizeTabs:true}).catch(function(){}); }catch(e){}
+
+/* ---------- durum ---------- */
+var me = null;            // {uid, email, name, isAdmin}
+var groups = {};          // gid -> group
+var topics = {};          // gid -> {tid -> topic}
+var unsubGroups = null;
+var unsubTopics = {};     // gid -> fn
+var unsubNotes = null;
+var notesCache = [];      // açık konunun notları
+var route = {page:"home"};
+var groupsReady = false;
 
 /* ---------- yardımcılar ---------- */
-function uid(){ return "t" + Math.random().toString(36).slice(2,9) + Math.random().toString(36).slice(2,5); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 function todayStr(){
@@ -214,58 +231,184 @@ function fmtDate(iso){
   return d.toLocaleDateString("tr-TR", {day:"numeric", month:"short"});
 }
 function fmtDateTime(ts){
+  if(!ts) return "";
   var d = new Date(ts);
   return d.toLocaleDateString("tr-TR", {day:"numeric", month:"short"}) + " " +
          d.toLocaleTimeString("tr-TR", {hour:"2-digit", minute:"2-digit"});
 }
-function daysDiff(iso){ // due - today (gün)
+function daysDiff(iso){
   var t = todayStr().split("-"), p = iso.split("-");
   var a = new Date(+t[0], +t[1]-1, +t[2]), b = new Date(+p[0], +p[1]-1, +p[2]);
   return Math.round((b - a) / 86400000);
 }
 function initials(name){
-  var parts = name.trim().split(/\s+/);
+  var parts = String(name||"?").trim().split(/\s+/);
   var s = parts[0].charAt(0);
   if(parts.length > 1) s += parts[parts.length-1].charAt(0);
   return s.toLocaleUpperCase("tr-TR");
-}
-function groupOf(t){
-  if(t.groupType === "area") return db.areas.find(function(a){return a.id===t.groupId;});
-  return db.people.find(function(p){return p.id===t.groupId;});
-}
-function groupLabel(t){
-  var g = groupOf(t);
-  if(!g) return "?";
-  return t.groupType === "area" ? (g.emoji + " " + g.name) : ("👤 " + g.name);
-}
-function openTopics(type, id){
-  return db.topics.filter(function(t){ return t.groupType===type && t.groupId===id && t.status!=="closed"; });
 }
 function toast(msg){
   var el = document.getElementById("toast");
   el.textContent = msg;
   el.classList.add("show");
   clearTimeout(toast._t);
-  toast._t = setTimeout(function(){ el.classList.remove("show"); }, 1800);
+  toast._t = setTimeout(function(){ el.classList.remove("show"); }, 2200);
+}
+function authErrTr(e){
+  var c = e && e.code || "";
+  if(c.indexOf("invalid-credential")>=0 || c.indexOf("wrong-password")>=0 || c.indexOf("user-not-found")>=0) return "E-posta veya şifre hatalı.";
+  if(c.indexOf("email-already-in-use")>=0) return "Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.";
+  if(c.indexOf("weak-password")>=0) return "Şifre en az 6 karakter olmalı.";
+  if(c.indexOf("invalid-email")>=0) return "Geçerli bir e-posta adresi yaz.";
+  if(c.indexOf("too-many-requests")>=0) return "Çok fazla deneme yapıldı, biraz bekleyip tekrar dene.";
+  if(c.indexOf("network")>=0) return "İnternet bağlantısını kontrol et.";
+  return "Bir sorun oluştu: " + (e && e.message || "");
+}
+function go(r){ route = r; render(); window.scrollTo(0,0); }
+function visibleGroups(type){
+  return Object.values(groups).filter(function(g){ return g.type===type; })
+    .sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); });
+}
+function openCount(gid){
+  var m = topics[gid] || {};
+  return Object.values(m).filter(function(t){ return t.status!=="closed"; }).length;
+}
+function totalCount(gid){
+  return Object.keys(topics[gid]||{}).length;
 }
 
-/* ---------- yönlendirme ---------- */
-var route = {page:"home"};
-function go(r){ route = r; render(); window.scrollTo(0,0); }
+/* ---------- firestore dinleyicileri ---------- */
+function startListening(){
+  stopListening();
+  var q = me.isAdmin
+    ? db.collection("groups")
+    : db.collection("groups").where("memberEmails", "array-contains", me.email);
+  unsubGroups = q.onSnapshot(function(snap){
+    var seen = {};
+    snap.forEach(function(doc){
+      var g = doc.data(); g.id = doc.id; seen[doc.id] = true;
+      groups[doc.id] = g;
+      if(!unsubTopics[doc.id]) listenTopics(doc.id);
+    });
+    Object.keys(groups).forEach(function(gid){
+      if(!seen[gid]){
+        delete groups[gid]; delete topics[gid];
+        if(unsubTopics[gid]){ unsubTopics[gid](); delete unsubTopics[gid]; }
+      }
+    });
+    if(!groupsReady){
+      groupsReady = true;
+      if(me.isAdmin && snap.empty) seedDefaults();
+    }
+    render();
+  }, function(err){
+    console.error(err);
+    toast("Veri okunamadı: yetki ya da bağlantı sorunu");
+  });
+}
+function listenTopics(gid){
+  unsubTopics[gid] = db.collection("groups").doc(gid).collection("topics")
+    .onSnapshot(function(snap){
+      var m = {};
+      snap.forEach(function(doc){ var t = doc.data(); t.id = doc.id; t.gid = gid; m[doc.id] = t; });
+      topics[gid] = m;
+      render();
+    }, function(err){ console.error("topics", gid, err); });
+}
+function stopListening(){
+  if(unsubGroups){ unsubGroups(); unsubGroups = null; }
+  Object.values(unsubTopics).forEach(function(fn){ fn(); });
+  unsubTopics = {}; groups = {}; topics = {}; groupsReady = false;
+  stopNotes();
+}
+function stopNotes(){ if(unsubNotes){ unsubNotes(); unsubNotes = null; } notesCache = []; }
+function listenNotes(gid, tid){
+  stopNotes();
+  unsubNotes = db.collection("groups").doc(gid).collection("topics").doc(tid)
+    .collection("notes").orderBy("ts","desc")
+    .onSnapshot(function(snap){
+      notesCache = [];
+      snap.forEach(function(doc){ var n = doc.data(); n.id = doc.id; notesCache.push(n); });
+      if(route.page === "topic") render();
+    }, function(err){ console.error("notes", err); });
+}
+function seedDefaults(){
+  var batch = db.batch();
+  [["Şirket","🏢"],["Aile","🏠"],["Finans","💰"]].forEach(function(a, i){
+    var ref = db.collection("groups").doc();
+    batch.set(ref, {name:a[0], emoji:a[1], type:"area", memberEmails:[], createdAt: Date.now()+i});
+  });
+  batch.commit().catch(function(e){ console.error(e); });
+}
 
-/* ---------- başlık + fab ---------- */
-function setHeader(html){ document.getElementById("header").innerHTML = html; }
-function backBtn(target){
-  return '<button class="iconbtn" data-act="back" data-target="' + esc(target) + '">‹</button>';
+/* ---------- giriş ekranı ---------- */
+var authMode = "login"; // login | signup
+function renderAuth(){
+  document.getElementById("header").classList.add("hidden");
+  document.getElementById("fab").classList.add("hidden");
+  var isL = authMode === "login";
+  document.getElementById("view").innerHTML =
+    '<div class="auth-wrap">' +
+    '<img class="auth-logo" src="icon.png" alt="">' +
+    '<h1>Konu Takibi</h1>' +
+    '<div class="sub">' + (isL ? "Hesabınla giriş yap" : "Yeni hesap oluştur") + '</div>' +
+    (isL ? "" : '<input type="text" id="aName" placeholder="Adın Soyadın" autocomplete="name">') +
+    '<input type="email" id="aEmail" placeholder="E-posta" autocomplete="email">' +
+    '<input type="password" id="aPass" placeholder="Şifre" autocomplete="' + (isL?"current-password":"new-password") + '">' +
+    '<div class="auth-err" id="aErr"></div>' +
+    '<button class="btn primary" data-act="auth-go">' + (isL ? "Giriş yap" : "Kayıt ol") + '</button>' +
+    '<button class="mutedbtn" data-act="auth-switch" style="margin-top:14px">' +
+      (isL ? "Hesabın yok mu? Kayıt ol" : "Zaten hesabın var mı? Giriş yap") + '</button>' +
+    (isL ? '<br><button class="mutedbtn" data-act="auth-forgot">Şifremi unuttum</button>' : "") +
+    '</div>';
+}
+function doAuth(){
+  var email = (document.getElementById("aEmail").value||"").trim().toLowerCase();
+  var pass = document.getElementById("aPass").value||"";
+  var errEl = document.getElementById("aErr");
+  errEl.textContent = "";
+  if(!email || !pass){ errEl.textContent = "E-posta ve şifreyi doldur."; return; }
+  if(authMode === "signup"){
+    var name = (document.getElementById("aName").value||"").trim();
+    if(!name){ errEl.textContent = "Adını yaz."; return; }
+    auth.createUserWithEmailAndPassword(email, pass).then(function(cred){
+      cred.user.updateProfile({displayName: name});
+      return db.collection("users").doc(cred.user.uid).set({name:name, email:email});
+    }).catch(function(e){ errEl.textContent = authErrTr(e); });
+  } else {
+    auth.signInWithEmailAndPassword(email, pass).catch(function(e){ errEl.textContent = authErrTr(e); });
+  }
+}
+function doForgot(){
+  var email = (document.getElementById("aEmail").value||"").trim().toLowerCase();
+  var errEl = document.getElementById("aErr");
+  if(!email){ errEl.textContent = "Önce e-posta adresini yaz, sonra tekrar tıkla."; return; }
+  auth.sendPasswordResetEmail(email).then(function(){
+    errEl.style.color = "var(--closed)";
+    errEl.textContent = "Şifre sıfırlama bağlantısı e-postana gönderildi.";
+  }).catch(function(e){ errEl.textContent = authErrTr(e); });
 }
 
 /* ---------- ana sayfa ---------- */
+function setHeader(html){
+  var h = document.getElementById("header");
+  h.classList.remove("hidden");
+  h.innerHTML = html;
+}
+function backBtn(target){
+  return '<button class="iconbtn" data-act="back" data-target="' + esc(target) + '">‹</button>';
+}
 function renderHome(){
   setHeader('<h1>📌 Konu Takibi</h1><button class="iconbtn" data-act="settings">⚙️</button>');
   var h = "";
+  if(!navigator.onLine) h += '<div class="offline-bar">Çevrimdışısın — değişiklikler bağlanınca eşitlenir</div>';
 
-  // takip zamanı gelenler
-  var due = db.topics.filter(function(t){ return t.status!=="closed" && t.due && daysDiff(t.due) <= 7; });
+  var due = [];
+  Object.values(topics).forEach(function(m){
+    Object.values(m).forEach(function(t){
+      if(t.status!=="closed" && t.due && daysDiff(t.due) <= 7) due.push(t);
+    });
+  });
   due.sort(function(a,b){ return a.due < b.due ? -1 : 1; });
   if(due.length){
     h += '<div class="section-title">⏰ Takip zamanı</div><div class="stack">';
@@ -273,45 +416,57 @@ function renderHome(){
     h += '</div>';
   }
 
-  // alanlar
-  h += '<div class="section-title">Alanlar</div><div class="grid">';
-  db.areas.forEach(function(a){
-    var n = openTopics("area", a.id).length;
-    var total = db.topics.filter(function(t){return t.groupType==="area" && t.groupId===a.id;}).length;
-    var countHtml = n ? "<b>" + n + "</b> açık konu"
-                  : (total ? '<span class="clean">✓ hepsi kapandı</span>' : "henüz konu yok");
-    h += '<button class="card area-card" data-act="group" data-type="area" data-id="' + esc(a.id) + '">' +
-         '<div class="emoji">' + esc(a.emoji) + '</div>' +
-         '<div class="name">' + esc(a.name) + '</div>' +
-         '<div class="count">' + countHtml + '</div>' +
-         '</button>';
-  });
-  h += '<button class="add-card" data-act="add-area">+ Alan ekle</button></div>';
-
-  // kişiler
-  h += '<div class="section-title">Kişiler</div><div class="stack">';
-  if(!db.people.length){
-    h += '<div class="empty" style="padding:14px">Takip ettiğin kişileri ekle — her kişiyle konuşacağın konular ayrı listede dursun.</div>';
+  var areas = visibleGroups("area");
+  if(areas.length || me.isAdmin){
+    h += '<div class="section-title">Alanlar</div><div class="grid">';
+    areas.forEach(function(a){
+      var n = openCount(a.id), tot = totalCount(a.id);
+      var countHtml = n ? "<b>" + n + "</b> açık konu"
+                    : (tot ? '<span class="clean">✓ hepsi kapandı</span>' : "henüz konu yok");
+      h += '<button class="card area-card" data-act="group" data-id="' + esc(a.id) + '">' +
+           '<div class="emoji">' + esc(a.emoji||"📁") + '</div>' +
+           '<div class="name">' + esc(a.name) + '</div>' +
+           '<div class="count">' + countHtml + '</div></button>';
+    });
+    if(me.isAdmin) h += '<button class="add-card" data-act="add-area">+ Alan ekle</button>';
+    h += '</div>';
   }
-  db.people.forEach(function(p){
-    var n = openTopics("person", p.id).length;
-    h += '<button class="card person-row" data-act="group" data-type="person" data-id="' + esc(p.id) + '">' +
-         '<div class="avatar">' + esc(initials(p.name)) + '</div>' +
-         '<div class="info"><div class="name">' + esc(p.name) + '</div>' +
-         '<div class="count">' + (n ? n + " açık konu" : "açık konu yok") + '</div></div>' +
-         '<div class="chev">›</div></button>';
-  });
-  h += '<button class="add-card" data-act="add-person">+ Kişi ekle</button></div>';
+
+  var people = visibleGroups("person");
+  if(people.length || me.isAdmin){
+    h += '<div class="section-title">Kişiler</div><div class="stack">';
+    if(!people.length && me.isAdmin){
+      h += '<div class="empty" style="padding:14px">Takip ettiğin kişileri e-postasıyla ekle — o kişi kendi ajandasını görüp güncelleyebilsin.</div>';
+    }
+    people.forEach(function(p){
+      var n = openCount(p.id);
+      h += '<button class="card person-row" data-act="group" data-id="' + esc(p.id) + '">' +
+           '<div class="avatar">' + esc(initials(p.name)) + '</div>' +
+           '<div class="info"><div class="name">' + esc(p.name) + '</div>' +
+           '<div class="count">' + (n ? n + " açık konu" : "açık konu yok") + '</div></div>' +
+           '<div class="chev">›</div></button>';
+    });
+    if(me.isAdmin) h += '<button class="add-card" data-act="add-person">+ Kişi ekle</button>';
+    h += '</div>';
+  }
+
+  if(!areas.length && !people.length && !me.isAdmin){
+    h += '<div class="empty" style="margin-top:80px"><div class="big">👋</div>Merhaba ' + esc(me.name) +
+      '!<br>Henüz seninle paylaşılmış bir bölüm yok.<br>Erdem seni bir alana ekleyince burada görünecek.</div>';
+  }
 
   document.getElementById("view").innerHTML = h;
-  document.getElementById("fab").classList.remove("hidden");
+  document.getElementById("fab").classList.toggle("hidden", !(areas.length || people.length));
 }
 
 /* ---------- konu satırı ---------- */
 function topicRowHtml(t, showGroup){
   var cls = "topic-row " + t.status;
   var badges = "";
-  if(showGroup) badges += '<span class="badge group">' + esc(groupLabel(t)) + '</span>';
+  if(showGroup){
+    var g = groups[t.gid];
+    if(g) badges += '<span class="badge group">' + esc(g.type==="area" ? ((g.emoji||"📁")+" "+g.name) : ("👤 "+g.name)) + '</span>';
+  }
   if(t.status === "waiting") badges += '<span class="badge waiting">⏸ Beklemede</span>';
   if(t.due && t.status !== "closed"){
     var d = daysDiff(t.due);
@@ -319,10 +474,10 @@ function topicRowHtml(t, showGroup){
     else if(d === 0) badges += '<span class="badge due-today">Bugün</span>';
     else badges += '<span class="badge">📅 ' + fmtDate(t.due) + '</span>';
   }
-  if(t.notes.length) badges += '<span class="badge">📝 ' + t.notes.length + '</span>';
+  if(t.noteCount) badges += '<span class="badge">📝 ' + t.noteCount + '</span>';
   return '<div class="card ' + cls + '">' +
-    '<button class="check" data-act="toggle" data-id="' + esc(t.id) + '" aria-label="Kapat">✓</button>' +
-    '<button class="body" data-act="topic" data-id="' + esc(t.id) + '">' +
+    '<button class="check" data-act="toggle" data-gid="' + esc(t.gid) + '" data-id="' + esc(t.id) + '" aria-label="Kapat">✓</button>' +
+    '<button class="body" data-act="topic" data-gid="' + esc(t.gid) + '" data-id="' + esc(t.id) + '">' +
     '<div class="title">' + esc(t.title) + '</div>' +
     (badges ? '<div class="badges">' + badges + '</div>' : '') +
     '</button></div>';
@@ -330,14 +485,13 @@ function topicRowHtml(t, showGroup){
 
 /* ---------- grup sayfası ---------- */
 function renderGroup(){
-  var type = route.type, id = route.id;
-  var g = type === "area" ? db.areas.find(function(a){return a.id===id;}) : db.people.find(function(p){return p.id===id;});
+  var g = groups[route.gid];
   if(!g){ go({page:"home"}); return; }
-  var title = type === "area" ? (g.emoji + " " + g.name) : ("👤 " + g.name);
+  var title = g.type === "area" ? ((g.emoji||"📁") + " " + g.name) : ("👤 " + g.name);
   setHeader(backBtn("home") + '<h1>' + esc(title) + '</h1>' +
-    '<button class="iconbtn" data-act="group-menu">⋯</button>');
+    (me.isAdmin ? '<button class="iconbtn" data-act="group-menu">⋯</button>' : ""));
 
-  var items = db.topics.filter(function(t){ return t.groupType===type && t.groupId===id; });
+  var items = Object.values(topics[route.gid]||{});
   var open = items.filter(function(t){ return t.status!=="closed"; });
   var closed = items.filter(function(t){ return t.status==="closed"; });
   open.sort(function(a,b){
@@ -380,25 +534,27 @@ function quickAdd(){
   var qa = document.getElementById("qa");
   var v = qa.value.trim();
   if(!v) return;
-  db.topics.push({id:uid(), title:v, groupType:route.type, groupId:route.id,
-    status:"open", due:null, notes:[], createdAt:Date.now(), closedAt:null});
-  save(); render();
-  var q2 = document.getElementById("qa");
-  if(q2){ q2.focus(); }
-  toast("Konu eklendi");
+  db.collection("groups").doc(route.gid).collection("topics").add({
+    title:v, status:"open", due:null, createdAt:Date.now(), closedAt:null,
+    createdBy: me.email, createdByName: me.name, noteCount:0
+  }).catch(function(e){ toast("Eklenemedi: " + authErrTr(e)); });
+  qa.value = "";
+  qa.focus();
 }
 
 /* ---------- konu detayı ---------- */
 function renderTopic(){
-  var t = db.topics.find(function(x){ return x.id===route.id; });
-  if(!t){ go({page:"home"}); return; }
-  var backTarget = "group:" + t.groupType + ":" + t.groupId;
-  setHeader(backBtn(backTarget) + '<h1></h1>' +
-    '<button class="iconbtn" data-act="rename" data-id="' + esc(t.id) + '">✏️</button>' +
-    '<button class="iconbtn" data-act="del-topic" data-id="' + esc(t.id) + '">🗑</button>');
+  var m = topics[route.gid] || {};
+  var t = m[route.id];
+  if(!t){ go(groups[route.gid] ? {page:"group", gid:route.gid} : {page:"home"}); return; }
+  setHeader(backBtn("group:" + t.gid) + '<h1></h1>' +
+    (me.isAdmin ? '<button class="iconbtn" data-act="rename">✏️</button>' +
+                  '<button class="iconbtn" data-act="del-topic">🗑</button>' : ""));
 
+  var g = groups[t.gid];
   var h = '<div class="detail-title">' + esc(t.title) + '</div>' +
-    '<div class="detail-sub">' + esc(groupLabel(t)) + ' · ' + fmtDateTime(t.createdAt) + '</div>';
+    '<div class="detail-sub">' + esc(g ? g.name : "") + " · " + esc(t.createdByName||"") +
+    " ekledi · " + fmtDateTime(t.createdAt) + '</div>';
 
   h += '<div class="chips">' +
     chip(t, "open", "Açık") + chip(t, "waiting", "Beklemede") + chip(t, "closed", "Kapandı") + '</div>';
@@ -408,42 +564,44 @@ function renderTopic(){
     (t.due ? '<button class="linkbtn" data-act="clear-due">Kaldır</button>' : '') + '</div>';
 
   h += '<div class="section-title">📝 Notlar</div>' +
-    '<div class="rowline"><input type="text" id="noteInput" placeholder="Not ekle…" autocomplete="off" ' +
+    '<div class="rowline"><input type="text" id="noteInput" placeholder="Not / yorum ekle…" autocomplete="off" ' +
     'style="flex:1; border:1px solid var(--line); border-radius:12px; padding:11px 12px; background:var(--card); outline:none;">' +
     '<button class="linkbtn" data-act="add-note">Ekle</button></div>';
 
-  var notes = t.notes.slice().reverse();
-  if(notes.length){
+  if(notesCache.length){
     h += '<div class="stack" style="margin-top:10px">';
-    notes.forEach(function(n){
-      h += '<div class="note"><div class="when">' + fmtDateTime(n.ts) + '</div>' +
+    notesCache.forEach(function(n){
+      h += '<div class="note"><div class="when">' + esc(n.authorName||"") + ' · ' + fmtDateTime(n.ts) + '</div>' +
         '<div class="text">' + esc(n.text) + '</div></div>';
     });
     h += '</div>';
   } else {
-    h += '<div class="empty" style="padding:16px">Henüz not yok. Gelişmeleri buraya yaz — hiçbir şey aklında kalmasın.</div>';
+    h += '<div class="empty" style="padding:16px">Henüz not yok. Gelişmeleri buraya yazın — ekipçe görünür.</div>';
   }
 
   document.getElementById("view").innerHTML = h;
   document.getElementById("fab").classList.add("hidden");
   document.getElementById("dueInput").addEventListener("change", function(e){
-    t.due = e.target.value || null; save(); render();
+    topicRef().update({due: e.target.value || null}).catch(function(){ toast("Kaydedilemedi"); });
   });
   document.getElementById("noteInput").addEventListener("keydown", function(e){
     if(e.key === "Enter") addNote();
   });
 }
 function chip(t, st, label){
-  return '<button class="chip' + (t.status===st ? " on-" + st : "") + '" data-act="status" data-id="' +
-    esc(t.id) + '" data-st="' + st + '">' + label + '</button>';
+  return '<button class="chip' + (t.status===st ? " on-" + st : "") + '" data-act="status" data-st="' + st + '">' + label + '</button>';
+}
+function topicRef(){
+  return db.collection("groups").doc(route.gid).collection("topics").doc(route.id);
 }
 function addNote(){
-  var t = db.topics.find(function(x){ return x.id===route.id; });
   var inp = document.getElementById("noteInput");
   var v = inp.value.trim();
-  if(!t || !v) return;
-  t.notes.push({ts:Date.now(), text:v});
-  save(); render();
+  if(!v) return;
+  inp.value = "";
+  topicRef().collection("notes").add({text:v, ts:Date.now(), authorEmail:me.email, authorName:me.name})
+    .catch(function(){ toast("Not eklenemedi"); });
+  topicRef().update({noteCount: firebase.firestore.FieldValue.increment(1)}).catch(function(){});
 }
 
 /* ---------- modallar ---------- */
@@ -455,86 +613,70 @@ function closeSheet(){ document.getElementById("modal").innerHTML = ""; }
 
 function sheetNewTopic(){
   var opts = "";
-  db.areas.forEach(function(a){ opts += '<option value="area:' + esc(a.id) + '">' + esc(a.emoji + " " + a.name) + '</option>'; });
-  db.people.forEach(function(p){ opts += '<option value="person:' + esc(p.id) + '">👤 ' + esc(p.name) + '</option>'; });
+  visibleGroups("area").forEach(function(a){ opts += '<option value="' + esc(a.id) + '">' + esc((a.emoji||"📁") + " " + a.name) + '</option>'; });
+  visibleGroups("person").forEach(function(p){ opts += '<option value="' + esc(p.id) + '">👤 ' + esc(p.name) + '</option>'; });
   openSheet('<h2>Yeni konu</h2>' +
     '<label>Konu</label><input type="text" id="ntTitle" placeholder="Ne takip edilecek?" autocomplete="off">' +
     '<label>Nerede</label><select id="ntGroup">' + opts + '</select>' +
     '<label>Takip tarihi (isteğe bağlı)</label><input type="date" id="ntDue">' +
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
     '<button class="btn primary" data-act="nt-save">Ekle</button></div>');
-  var ntEl = document.getElementById("ntTitle"); if(ntEl) ntEl.focus();
+  var el = document.getElementById("ntTitle"); if(el) el.focus();
 }
-function sheetName(kind){ // kind: "area" | "person"
+function sheetName(kind){
   var isArea = kind === "area";
   openSheet('<h2>' + (isArea ? "Yeni alan" : "Yeni kişi") + '</h2>' +
     (isArea ? '<label>Simge</label><input type="text" id="nmEmoji" placeholder="📁" maxlength="4">' : '') +
     '<label>' + (isArea ? "Alan adı" : "İsim") + '</label>' +
-    '<input type="text" id="nmName" placeholder="' + (isArea ? "örn. Yatırımlar" : "örn. Ahmet") + '" autocomplete="off">' +
+    '<input type="text" id="nmName" placeholder="' + (isArea ? "örn. Yatırımlar" : "örn. Ahmet Kaya") + '" autocomplete="off">' +
+    (isArea ? '' : '<label>E-posta adresi</label><input type="email" id="nmEmail" placeholder="kisi@ornek.com" autocomplete="off">' +
+      '<div style="font-size:13px; color:var(--muted); margin-top:6px">Bu kişi aynı e-postayla uygulamaya kayıt olunca sadece kendi ajandasını görür.</div>') +
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
     '<button class="btn primary" data-act="nm-save" data-kind="' + kind + '">Ekle</button></div>');
-  var nmEl = document.getElementById("nmName"); if(nmEl) nmEl.focus();
+  var el = document.getElementById("nmName"); if(el) el.focus();
 }
 function sheetGroupMenu(){
-  var isArea = route.type === "area";
-  openSheet('<h2>' + (isArea ? "Alan" : "Kişi") + ' ayarları</h2>' +
+  var g = groups[route.gid];
+  if(!g) return;
+  var isArea = g.type === "area";
+  var members = (g.memberEmails||[]).map(function(em){
+    return '<span class="member-pill">' + esc(em) + '<button data-act="gm-rm" data-email="' + esc(em) + '">✕</button></span>';
+  }).join("") || '<div style="font-size:14px; color:var(--muted)">Henüz üye yok — sadece sen görüyorsun.</div>';
+  openSheet('<h2>' + esc(g.name) + ' ayarları</h2>' +
     '<label>Adı</label><input type="text" id="gmName" autocomplete="off">' +
+    '<label>' + (isArea ? "Üyeler (bu alanı görüp güncelleyebilenler)" : "Kişinin e-postası") + '</label>' +
+    '<div id="gmMembers" style="margin-bottom:4px">' + members + '</div>' +
+    '<div class="rowline"><input type="email" id="gmNewEmail" placeholder="e-posta ekle…" autocomplete="off" ' +
+    'style="flex:1; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--bg); outline:none;">' +
+    '<button class="linkbtn" data-act="gm-add">Ekle</button></div>' +
     '<div class="actions"><button class="btn danger" data-act="gm-del">Sil</button>' +
     '<button class="btn primary" data-act="gm-save">Kaydet</button></div>');
-  var g = isArea ? db.areas.find(function(a){return a.id===route.id;}) : db.people.find(function(p){return p.id===route.id;});
-  document.getElementById("gmName").value = g ? g.name : "";
+  document.getElementById("gmName").value = g.name;
 }
-function sheetRename(id){
-  var t = db.topics.find(function(x){ return x.id===id; });
+function sheetRename(){
+  var m = topics[route.gid]||{}; var t = m[route.id];
   if(!t) return;
   openSheet('<h2>Konuyu düzenle</h2>' +
     '<label>Başlık</label><input type="text" id="rnTitle" autocomplete="off">' +
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
-    '<button class="btn primary" data-act="rn-save" data-id="' + esc(id) + '">Kaydet</button></div>');
+    '<button class="btn primary" data-act="rn-save">Kaydet</button></div>');
   document.getElementById("rnTitle").value = t.title;
 }
-function sheetConfirm(msg, act, data){
+function sheetConfirm(msg, act){
   openSheet('<h2>Emin misin?</h2><p style="color:var(--muted); margin:0">' + esc(msg) + '</p>' +
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
-    '<button class="btn danger" data-act="' + esc(act) + '" data-id="' + esc(data||"") + '">Evet, sil</button></div>');
+    '<button class="btn danger" data-act="' + esc(act) + '">Evet, sil</button></div>');
 }
 function sheetSettings(){
-  var open = db.topics.filter(function(t){return t.status!=="closed";}).length;
-  var closedN = db.topics.length - open;
-  openSheet('<h2>Ayarlar</h2>' +
-    '<p style="color:var(--muted); font-size:14px; margin:0 0 4px">' +
-    db.areas.length + ' alan · ' + db.people.length + ' kişi · ' + open + ' açık, ' + closedN + ' kapanmış konu</p>' +
-    '<p style="color:var(--muted); font-size:13px">Veriler bu telefondaki tarayıcıda saklanır. Ara sıra yedek almanı öneririm.</p>' +
-    '<div class="actions" style="margin-top:10px">' +
-    '<button class="btn ghost" data-act="import">İçe aktar</button>' +
-    '<button class="btn primary" data-act="export">Yedek indir</button></div>');
+  openSheet('<h2>Hesap</h2>' +
+    '<div class="person-row" style="padding:0 0 8px 0"><div class="avatar">' + esc(initials(me.name)) + '</div>' +
+    '<div class="info"><div class="name">' + esc(me.name) + (me.isAdmin ? ' <span style="font-size:12px;color:var(--accent)">(yönetici)</span>' : '') + '</div>' +
+    '<div class="count">' + esc(me.email) + '</div></div></div>' +
+    '<p style="color:var(--muted); font-size:13px">Veriler bulutta güvenle saklanır ve tüm cihazlarında eşitlenir.' +
+    (me.isAdmin ? " Alanlara üye eklemek için alanın sayfasındaki ⋯ menüsünü kullan." : "") + '</p>' +
+    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Kapat</button>' +
+    '<button class="btn danger" data-act="logout">Çıkış yap</button></div>');
 }
-
-/* ---------- dışa / içe aktarma ---------- */
-function doExport(){
-  var blob = new Blob([JSON.stringify(db, null, 2)], {type:"application/json"});
-  var a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "konu-takibi-yedek-" + todayStr() + ".json";
-  document.body.appendChild(a); a.click(); a.remove();
-  toast("Yedek indirildi");
-}
-document.getElementById("importFile").addEventListener("change", function(e){
-  var f = e.target.files[0];
-  if(!f) return;
-  var r = new FileReader();
-  r.onload = function(){
-    try{
-      var d = JSON.parse(r.result);
-      if(!d || !Array.isArray(d.areas) || !Array.isArray(d.topics)) throw 0;
-      d.people = Array.isArray(d.people) ? d.people : [];
-      db = d; save(); closeSheet(); go({page:"home"});
-      toast("Yedek geri yüklendi");
-    }catch(err){ toast("Dosya okunamadı"); }
-  };
-  r.readAsText(f);
-  e.target.value = "";
-});
 
 /* ---------- olaylar ---------- */
 document.body.addEventListener("click", function(e){
@@ -546,7 +688,11 @@ document.body.addEventListener("click", function(e){
     return;
   }
   var act = el.getAttribute("data-act");
-  var id = el.getAttribute("data-id");
+
+  if(act === "auth-go") return doAuth();
+  if(act === "auth-switch"){ authMode = authMode==="login" ? "signup" : "login"; return renderAuth(); }
+  if(act === "auth-forgot") return doForgot();
+  if(act === "logout"){ closeSheet(); auth.signOut(); return; }
 
   if(act === "settings") return sheetSettings();
   if(act === "close-sheet") return closeSheet();
@@ -554,22 +700,30 @@ document.body.addEventListener("click", function(e){
     var tg = el.getAttribute("data-target");
     if(tg === "home") return go({page:"home"});
     var p = tg.split(":");
-    return go({page:"group", type:p[1], id:p[2]});
+    stopNotes();
+    return go({page:"group", gid:p[1]});
   }
-  if(act === "group") return go({page:"group", type:el.getAttribute("data-type"), id:id || el.getAttribute("data-id")});
-  if(act === "topic") return go({page:"topic", id:id});
+  if(act === "group") return go({page:"group", gid:el.getAttribute("data-id")});
+  if(act === "topic"){
+    var gid = el.getAttribute("data-gid"), tid = el.getAttribute("data-id");
+    listenNotes(gid, tid);
+    return go({page:"topic", gid:gid, id:tid});
+  }
   if(act === "toggle"){
-    var t = db.topics.find(function(x){return x.id===id;});
+    var gid2 = el.getAttribute("data-gid"), tid2 = el.getAttribute("data-id");
+    var t = (topics[gid2]||{})[tid2];
     if(t){
-      if(t.status === "closed"){ t.status = "open"; t.closedAt = null; toast("Konu tekrar açıldı"); }
-      else { t.status = "closed"; t.closedAt = Date.now(); toast("Konu kapandı ✓"); }
-      save(); render();
+      var closed = t.status === "closed";
+      db.collection("groups").doc(gid2).collection("topics").doc(tid2).update({
+        status: closed ? "open" : "closed",
+        closedAt: closed ? null : Date.now()
+      }).then(function(){ toast(closed ? "Konu tekrar açıldı" : "Konu kapandı ✓"); })
+        .catch(function(){ toast("Değiştirilemedi"); });
     }
     return;
   }
   if(act === "toggle-closed"){ route.showClosed = !route.showClosed; return render(); }
   if(act === "qa-add") return quickAdd();
-  if(act === "fab" ) return sheetNewTopic();
   if(act === "add-area") return sheetName("area");
   if(act === "add-person") return sheetName("person");
   if(act === "group-menu") return sheetGroupMenu();
@@ -577,101 +731,141 @@ document.body.addEventListener("click", function(e){
   if(act === "nt-save"){
     var title = document.getElementById("ntTitle").value.trim();
     if(!title){ toast("Konu başlığı yaz"); return; }
-    var gv = document.getElementById("ntGroup").value.split(":");
+    var gsel = document.getElementById("ntGroup").value;
     var due = document.getElementById("ntDue").value || null;
-    db.topics.push({id:uid(), title:title, groupType:gv[0], groupId:gv[1],
-      status:"open", due:due, notes:[], createdAt:Date.now(), closedAt:null});
-    save(); closeSheet();
-    go({page:"group", type:gv[0], id:gv[1]});
-    toast("Konu eklendi");
+    db.collection("groups").doc(gsel).collection("topics").add({
+      title:title, status:"open", due:due, createdAt:Date.now(), closedAt:null,
+      createdBy: me.email, createdByName: me.name, noteCount:0
+    }).catch(function(){ toast("Eklenemedi"); });
+    closeSheet();
+    go({page:"group", gid:gsel});
     return;
   }
   if(act === "nm-save"){
     var kind = el.getAttribute("data-kind");
     var name = document.getElementById("nmName").value.trim();
     if(!name){ toast("İsim yaz"); return; }
+    var data;
     if(kind === "area"){
       var em = (document.getElementById("nmEmoji").value.trim()) || "📁";
-      var na = {id:uid(), name:name, emoji:em};
-      db.areas.push(na); save(); closeSheet(); go({page:"group", type:"area", id:na.id});
+      data = {name:name, emoji:em, type:"area", memberEmails:[], createdAt:Date.now()};
     } else {
-      var np = {id:uid(), name:name};
-      db.people.push(np); save(); closeSheet(); go({page:"group", type:"person", id:np.id});
+      var pmail = (document.getElementById("nmEmail").value||"").trim().toLowerCase();
+      data = {name:name, type:"person", memberEmails: pmail ? [pmail] : [], createdAt:Date.now()};
     }
+    db.collection("groups").add(data).then(function(ref){
+      closeSheet(); go({page:"group", gid:ref.id});
+    }).catch(function(){ toast("Eklenemedi"); });
+    return;
+  }
+  if(act === "gm-add"){
+    var inp = document.getElementById("gmNewEmail");
+    var nem = (inp.value||"").trim().toLowerCase();
+    if(!nem || nem.indexOf("@") < 0){ toast("Geçerli bir e-posta yaz"); return; }
+    db.collection("groups").doc(route.gid).update({
+      memberEmails: firebase.firestore.FieldValue.arrayUnion(nem)
+    }).then(function(){ toast(nem + " eklendi"); setTimeout(sheetGroupMenu, 300); })
+      .catch(function(){ toast("Eklenemedi"); });
+    return;
+  }
+  if(act === "gm-rm"){
+    var rem = el.getAttribute("data-email");
+    db.collection("groups").doc(route.gid).update({
+      memberEmails: firebase.firestore.FieldValue.arrayRemove(rem)
+    }).then(function(){ toast("Çıkarıldı"); setTimeout(sheetGroupMenu, 300); })
+      .catch(function(){ toast("Çıkarılamadı"); });
     return;
   }
   if(act === "gm-save"){
     var nn = document.getElementById("gmName").value.trim();
     if(!nn){ toast("İsim boş olamaz"); return; }
-    var g = route.type === "area" ? db.areas.find(function(a){return a.id===route.id;})
-                                  : db.people.find(function(p){return p.id===route.id;});
-    if(g){ g.name = nn; save(); }
-    closeSheet(); render();
+    db.collection("groups").doc(route.gid).update({name:nn}).catch(function(){ toast("Kaydedilemedi"); });
+    closeSheet();
     return;
   }
   if(act === "gm-del"){
-    var cnt = db.topics.filter(function(t){return t.groupType===route.type && t.groupId===route.id;}).length;
+    var cnt = totalCount(route.gid);
+    var g = groups[route.gid];
     return sheetConfirm(
-      cnt ? "Bu " + (route.type==="area"?"alan":"kişi") + " ve içindeki " + cnt + " konu tamamen silinecek."
-          : "Bu " + (route.type==="area"?"alan":"kişi") + " silinecek.",
-      "gm-del-yes");
+      (g && g.type==="area" ? "Bu alan" : "Bu kişi") + (cnt ? " ve içindeki " + cnt + " konu silinecek." : " silinecek.") +
+      " Bu işlem geri alınamaz.", "gm-del-yes");
   }
   if(act === "gm-del-yes"){
-    db.topics = db.topics.filter(function(t){ return !(t.groupType===route.type && t.groupId===route.id); });
-    if(route.type === "area") db.areas = db.areas.filter(function(a){return a.id!==route.id;});
-    else db.people = db.people.filter(function(p){return p.id!==route.id;});
-    save(); closeSheet(); go({page:"home"});
-    toast("Silindi");
+    var gid3 = route.gid;
+    var items = Object.values(topics[gid3]||{});
+    var batch = db.batch();
+    items.forEach(function(t){ batch.delete(db.collection("groups").doc(gid3).collection("topics").doc(t.id)); });
+    batch.delete(db.collection("groups").doc(gid3));
+    batch.commit().then(function(){ toast("Silindi"); }).catch(function(){ toast("Silinemedi"); });
+    closeSheet(); go({page:"home"});
     return;
   }
-  if(act === "rename") return sheetRename(id);
+  if(act === "rename") return sheetRename();
   if(act === "rn-save"){
-    var t2 = db.topics.find(function(x){return x.id===id;});
     var nt = document.getElementById("rnTitle").value.trim();
-    if(t2 && nt){ t2.title = nt; save(); }
-    closeSheet(); render();
+    if(nt) topicRef().update({title:nt}).catch(function(){ toast("Kaydedilemedi"); });
+    closeSheet();
     return;
   }
   if(act === "del-topic"){
-    return sheetConfirm("Bu konu ve notları silinecek.", "del-topic-yes", id);
+    return sheetConfirm("Bu konu ve notları silinecek.", "del-topic-yes");
   }
   if(act === "del-topic-yes"){
-    var t3 = db.topics.find(function(x){return x.id===id;});
-    var back = t3 ? {page:"group", type:t3.groupType, id:t3.groupId} : {page:"home"};
-    db.topics = db.topics.filter(function(x){return x.id!==id;});
-    save(); closeSheet(); go(back);
-    toast("Konu silindi");
+    var back = {page:"group", gid:route.gid};
+    topicRef().delete().then(function(){ toast("Konu silindi"); }).catch(function(){ toast("Silinemedi"); });
+    stopNotes();
+    closeSheet(); go(back);
     return;
   }
   if(act === "status"){
-    var t4 = db.topics.find(function(x){return x.id===id;});
-    if(t4){
-      var st = el.getAttribute("data-st");
-      t4.status = st;
-      t4.closedAt = st === "closed" ? Date.now() : null;
-      save(); render();
-      if(st === "closed") toast("Konu kapandı ✓");
-    }
+    var st = el.getAttribute("data-st");
+    topicRef().update({status: st, closedAt: st==="closed" ? Date.now() : null})
+      .then(function(){ if(st==="closed") toast("Konu kapandı ✓"); })
+      .catch(function(){ toast("Değiştirilemedi"); });
     return;
   }
   if(act === "clear-due"){
-    var t5 = db.topics.find(function(x){return x.id===route.id;});
-    if(t5){ t5.due = null; save(); render(); }
+    topicRef().update({due:null}).catch(function(){});
     return;
   }
   if(act === "add-note") return addNote();
-  if(act === "export") return doExport();
-  if(act === "import"){ document.getElementById("importFile").click(); return; }
 });
 document.getElementById("fab").addEventListener("click", sheetNewTopic);
 
 /* ---------- render ---------- */
 function render(){
+  if(!me){ renderAuth(); return; }
+  if(!groupsReady){
+    setHeader('<h1>📌 Konu Takibi</h1>');
+    document.getElementById("view").innerHTML = '<div class="spin"></div>';
+    return;
+  }
   if(route.page === "home") renderHome();
   else if(route.page === "group") renderGroup();
   else if(route.page === "topic") renderTopic();
 }
-render();
+
+/* ---------- oturum ---------- */
+auth.onAuthStateChanged(function(user){
+  if(user){
+    var email = (user.email||"").toLowerCase();
+    me = {uid:user.uid, email:email, name:user.displayName || email.split("@")[0], isAdmin: email === ADMIN_EMAIL};
+    if(!user.displayName){
+      db.collection("users").doc(user.uid).get().then(function(doc){
+        if(doc.exists && doc.data().name){ me.name = doc.data().name; render(); }
+      }).catch(function(){});
+    }
+    route = {page:"home"};
+    startListening();
+    render();
+  } else {
+    me = null;
+    stopListening();
+    renderAuth();
+  }
+});
+window.addEventListener("online", render);
+window.addEventListener("offline", render);
 })();
 </script>
 </body>
