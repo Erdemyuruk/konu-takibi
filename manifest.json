@@ -1,0 +1,12 @@
+{
+  "name": "Konu Takibi",
+  "short_name": "Konular",
+  "description": "Şirket, aile, finans ve kişi bazlı konu takibi",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#2f6fed",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
