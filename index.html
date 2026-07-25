@@ -173,6 +173,11 @@ main{padding:4px 16px 16px; max-width:560px; margin:0 auto;}
   padding:6px 6px 6px 12px; font-size:14px; margin:0 6px 6px 0;
 }
 .member-pill button{color:var(--danger); font-weight:700; width:22px; height:22px; border-radius:50%; background:var(--danger-soft); font-size:12px;}
+.bellbadge{
+  position:absolute; top:-4px; right:-4px; background:var(--danger); color:#fff;
+  font-size:11px; min-width:18px; height:18px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center; padding:0 4px; font-weight:700;
+}
 .spin{
   width:34px; height:34px; border:3px solid var(--line); border-top-color:var(--accent);
   border-radius:50%; margin:120px auto; animation:sp 1s linear infinite;
@@ -216,6 +221,8 @@ var unsubNotes = null;
 var notesCache = [];      // açık konunun notları
 var route = {page:"home"};
 var groupsReady = false;
+var notifs = [];          // bildirim kutum
+var unsubInbox = null;
 
 /* ---------- yardımcılar ---------- */
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
@@ -305,6 +312,46 @@ function startListening(){
     console.error(err);
     toast("Veri okunamadı: yetki ya da bağlantı sorunu");
   });
+  listenInbox();
+}
+function listenInbox(){
+  if(unsubInbox) unsubInbox();
+  unsubInbox = db.collection("inbox").doc(me.email).collection("items")
+    .orderBy("ts","desc").limit(60)
+    .onSnapshot(function(snap){
+      notifs = [];
+      snap.forEach(function(doc){ var n = doc.data(); n.id = doc.id; notifs.push(n); });
+      updateBell();
+      if(document.getElementById("notifList")) renderNotifSheetInner();
+    }, function(err){ console.error("inbox", err); });
+}
+function unreadCount(){
+  return notifs.filter(function(n){ return !n.read; }).length;
+}
+function updateBell(){
+  var b = document.getElementById("bellBadge");
+  if(!b) return;
+  var c = unreadCount();
+  if(c > 0){ b.textContent = c > 99 ? "99+" : c; b.classList.remove("hidden"); }
+  else b.classList.add("hidden");
+}
+function notifyMembers(gid, type, topicTitle, body, tid){
+  var g = groups[gid];
+  if(!g) return;
+  var rec = {};
+  (g.memberEmails||[]).forEach(function(em){ rec[em] = true; });
+  rec[ADMIN_EMAIL] = true;
+  delete rec[me.email];
+  var emails = Object.keys(rec);
+  if(!emails.length) return;
+  var gname = g.type === "person" ? (g.name + " ajandası") : g.name;
+  var batch = db.batch();
+  emails.forEach(function(em){
+    var ref = db.collection("inbox").doc(em).collection("items").doc();
+    batch.set(ref, {type:type, title:topicTitle, body:body||"", gid:gid, tid:tid||null,
+      groupName:gname, actorName:me.name, ts:Date.now(), read:false});
+  });
+  batch.commit().catch(function(e){ console.error("notify", e); });
 }
 function listenTopics(gid){
   unsubTopics[gid] = db.collection("groups").doc(gid).collection("topics")
@@ -317,6 +364,8 @@ function listenTopics(gid){
 }
 function stopListening(){
   if(unsubGroups){ unsubGroups(); unsubGroups = null; }
+  if(unsubInbox){ unsubInbox(); unsubInbox = null; }
+  notifs = [];
   Object.values(unsubTopics).forEach(function(fn){ fn(); });
   unsubTopics = {}; groups = {}; topics = {}; groupsReady = false;
   stopNotes();
@@ -399,7 +448,9 @@ function backBtn(target){
   return '<button class="iconbtn" data-act="back" data-target="' + esc(target) + '">‹</button>';
 }
 function renderHome(){
-  setHeader('<h1>📌 Konu Takibi</h1><button class="iconbtn" data-act="settings">⚙️</button>');
+  setHeader('<h1>📌 Konu Takibi</h1>' +
+    '<button class="iconbtn" data-act="notifs" style="position:relative">🔔<span id="bellBadge" class="bellbadge hidden"></span></button>' +
+    '<button class="iconbtn" data-act="settings">⚙️</button>');
   var h = "";
   if(!navigator.onLine) h += '<div class="offline-bar">Çevrimdışısın — değişiklikler bağlanınca eşitlenir</div>';
 
@@ -457,6 +508,7 @@ function renderHome(){
 
   document.getElementById("view").innerHTML = h;
   document.getElementById("fab").classList.toggle("hidden", !(areas.length || people.length));
+  updateBell();
 }
 
 /* ---------- konu satırı ---------- */
@@ -534,9 +586,12 @@ function quickAdd(){
   var qa = document.getElementById("qa");
   var v = qa.value.trim();
   if(!v) return;
-  db.collection("groups").doc(route.gid).collection("topics").add({
+  var gid = route.gid;
+  db.collection("groups").doc(gid).collection("topics").add({
     title:v, status:"open", due:null, createdAt:Date.now(), closedAt:null,
     createdBy: me.email, createdByName: me.name, noteCount:0
+  }).then(function(ref){
+    notifyMembers(gid, "topic", v, "", ref.id);
   }).catch(function(e){ toast("Eklenemedi: " + authErrTr(e)); });
   qa.value = "";
   qa.focus();
@@ -602,6 +657,8 @@ function addNote(){
   topicRef().collection("notes").add({text:v, ts:Date.now(), authorEmail:me.email, authorName:me.name})
     .catch(function(){ toast("Not eklenemedi"); });
   topicRef().update({noteCount: firebase.firestore.FieldValue.increment(1)}).catch(function(){});
+  var t = (topics[route.gid]||{})[route.id];
+  notifyMembers(route.gid, "note", t ? t.title : "", v, route.id);
 }
 
 /* ---------- modallar ---------- */
@@ -667,6 +724,38 @@ function sheetConfirm(msg, act){
     '<div class="actions"><button class="btn ghost" data-act="close-sheet">Vazgeç</button>' +
     '<button class="btn danger" data-act="' + esc(act) + '">Evet, sil</button></div>');
 }
+function typeText(n){
+  if(n.type==="topic") return " yeni konu ekledi";
+  if(n.type==="closed") return " konuyu kapattı";
+  if(n.type==="reopen") return " konuyu tekrar açtı";
+  if(n.type==="note") return " yorum yazdı";
+  return "";
+}
+function sheetNotifs(){
+  openSheet('<h2>🔔 Bildirimler</h2><div id="notifList"></div>' +
+    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Kapat</button>' +
+    (unreadCount() ? '<button class="btn primary" data-act="notif-readall">Tümünü okundu say</button>' : '') +
+    '</div>');
+  renderNotifSheetInner();
+}
+function renderNotifSheetInner(){
+  var el = document.getElementById("notifList");
+  if(!el) return;
+  if(!notifs.length){
+    el.innerHTML = '<div class="empty" style="padding:16px">Henüz bildirim yok.<br>Biri konu ekleyince, kapatınca ya da yorum yazınca burada görünür.</div>';
+    return;
+  }
+  var h = '<div class="stack">';
+  notifs.forEach(function(n){
+    h += '<button class="note" style="text-align:left; width:100%; opacity:' + (n.read ? '.55' : '1') + '" data-act="notif-open" data-id="' + esc(n.id) + '">' +
+      '<div class="when">' + esc(n.groupName||"") + ' · ' + fmtDateTime(n.ts) +
+      (n.read ? '' : ' · <b style="color:var(--accent)">yeni</b>') + '</div>' +
+      '<div class="text"><b>' + esc(n.actorName||"") + '</b>' + typeText(n) + ': ' + esc(n.title||"") +
+      (n.body ? '<br><span style="color:var(--muted)">“' + esc(n.body) + '”</span>' : '') + '</div></button>';
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
 function sheetSettings(){
   openSheet('<h2>Hesap</h2>' +
     '<div class="person-row" style="padding:0 0 8px 0"><div class="avatar">' + esc(initials(me.name)) + '</div>' +
@@ -717,9 +806,33 @@ document.body.addEventListener("click", function(e){
       db.collection("groups").doc(gid2).collection("topics").doc(tid2).update({
         status: closed ? "open" : "closed",
         closedAt: closed ? null : Date.now()
-      }).then(function(){ toast(closed ? "Konu tekrar açıldı" : "Konu kapandı ✓"); })
-        .catch(function(){ toast("Değiştirilemedi"); });
+      }).then(function(){
+        toast(closed ? "Konu tekrar açıldı" : "Konu kapandı ✓");
+        notifyMembers(gid2, closed ? "reopen" : "closed", t.title, "", tid2);
+      }).catch(function(){ toast("Değiştirilemedi"); });
     }
+    return;
+  }
+  if(act === "notifs") return sheetNotifs();
+  if(act === "notif-open"){
+    var nid = el.getAttribute("data-id");
+    var n = null;
+    notifs.forEach(function(x){ if(x.id===nid) n = x; });
+    if(!n) return;
+    if(!n.read) db.collection("inbox").doc(me.email).collection("items").doc(nid).update({read:true}).catch(function(){});
+    closeSheet();
+    if(n.gid && groups[n.gid]){
+      if(n.tid && (topics[n.gid]||{})[n.tid]){ listenNotes(n.gid, n.tid); go({page:"topic", gid:n.gid, id:n.tid}); }
+      else go({page:"group", gid:n.gid});
+    }
+    return;
+  }
+  if(act === "notif-readall"){
+    var nb = db.batch();
+    notifs.forEach(function(n){
+      if(!n.read) nb.update(db.collection("inbox").doc(me.email).collection("items").doc(n.id), {read:true});
+    });
+    nb.commit().catch(function(){});
     return;
   }
   if(act === "toggle-closed"){ route.showClosed = !route.showClosed; return render(); }
@@ -736,6 +849,8 @@ document.body.addEventListener("click", function(e){
     db.collection("groups").doc(gsel).collection("topics").add({
       title:title, status:"open", due:due, createdAt:Date.now(), closedAt:null,
       createdBy: me.email, createdByName: me.name, noteCount:0
+    }).then(function(ref){
+      notifyMembers(gsel, "topic", title, "", ref.id);
     }).catch(function(){ toast("Eklenemedi"); });
     closeSheet();
     go({page:"group", gid:gsel});
@@ -819,8 +934,16 @@ document.body.addEventListener("click", function(e){
   }
   if(act === "status"){
     var st = el.getAttribute("data-st");
+    var cur = (topics[route.gid]||{})[route.id];
+    var wasClosed = cur && cur.status === "closed";
     topicRef().update({status: st, closedAt: st==="closed" ? Date.now() : null})
-      .then(function(){ if(st==="closed") toast("Konu kapandı ✓"); })
+      .then(function(){
+        if(st==="closed") toast("Konu kapandı ✓");
+        if(cur){
+          if(st === "closed" && !wasClosed) notifyMembers(route.gid, "closed", cur.title, "", route.id);
+          else if(st !== "closed" && wasClosed) notifyMembers(route.gid, "reopen", cur.title, "", route.id);
+        }
+      })
       .catch(function(){ toast("Değiştirilemedi"); });
     return;
   }
